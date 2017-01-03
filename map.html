@@ -1,0 +1,169 @@
+<html>
+    <head>
+      <script src="jquery-2.1.4.min.js"></script>
+        <script src="talamasca/core.js"></script>
+        <script src="talamasca/sandbox.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/randomcolor/0.4.4/randomColor.min.js"></script>
+        <!--script src="talamasca/modules/hello-talamasca.js"></script>
+        <script src="talamasca/modules/message-display.js"></script>
+        <script src="talamasca/modules/product-categories-filter.js"></script>
+        <script src="talamasca/modules/product-list.js"></script-->
+        <script>
+            talamasca = {};
+            talamasca.modules = {};
+        </script>
+      <script src="talamasca/modules/plugins/execute-onload.js"></script>
+      <script src="talamasca/modules/plugins/input-arbiter.js"></script>
+        <script src="talamasca/modules/plugins/input-checkbox.js"></script>
+        <script src="talamasca/modules/plugins/input-date.js"></script>
+        <script src="talamasca/modules/plugins/input-ddl.js"></script>
+        <script src="talamasca/modules/plugins/output-checkbox.js"></script>
+        <script src="talamasca/modules/plugins/output-date.js"></script>
+        <script src="talamasca/modules/plugins/output-ddl.js"></script>
+        <script src="talamasca/modules/plugins/output-ddl.js"></script>
+        <script src="talamasca/modules/plugins/plugins-execute.js"></script>
+        <script src="talamasca/modules/plugins/plugin-webservice.js"></script>
+        <script src="talamasca/modules/plugins/output-notifier.js"></script>
+
+        <script src="esprima.js"></script>
+        <script src="estraverse.js"></script>
+        <script type="text/javascript" src="viz/vis.js"></script>
+       <link href="viz/vis-network.min.css" rel="stylesheet" type="text/css">
+        <script type="text/javascript">
+ function x (sb) {    var me;    var anchor;};
+ 
+ 
+             var x = function (sb) {
+                var me;
+                var anchor;
+                return {
+                    init: function () {
+                        me = this;
+                        var data = {};
+                        anchor = $("#clear-all a");
+                        anchor.click(function () {
+                            sb.notify({ type: 'clear-all-clicked', data});
+                        });
+                    },
+                    destroy: function () {
+                        me = null;
+                        anchor = null;
+                        sb.notify({ type: 'clear-all-destroyed', data});
+                    }
+                };
+             };
+
+            function parseModuleForNotifies(mod) {
+                var notifies = [];
+                for (var methodName in  mod.instance) {
+                        if (mod.instance.hasOwnProperty(methodName)) {
+
+                            var ast = esprima.parse("var x = " + String(mod.instance[methodName])); // function not recognized without the assignment
+                            estraverse.traverse(ast, {
+                                enter: function(node) {
+                                    if (node.type === 'ExpressionStatement'){
+                                        if(node.expression && node.expression.callee && node.expression.callee.property && node.expression.callee.property.name == "notify") {
+                                            notifies.push(node.expression.arguments[0].properties[0].value.value);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                }
+
+                return notifies;
+                
+            }
+
+                $(function() {
+                    var listenEvts = [];
+                    var notifyEvts = [];
+                    CORE.start_all();
+
+                    var id = 0;
+                    var nodes = [];
+                    
+                    for (var modName in  CORE.modules) {
+                        if (CORE.modules.hasOwnProperty(modName)) {
+                            id++; 
+                            var mod = CORE.modules[modName];
+                            nodes.push({id: id, label:modName, shape:'box', color: randomColor() });
+                            var notifies = parseModuleForNotifies(mod);
+                            for(var i = 0; i < notifies.length; i++) {
+                                notifyEvts.push({ key: notifies[i], mod: modName, id: id })
+                            }
+
+                            for (var eventName in  mod.events) {
+                                if (mod.events.hasOwnProperty(eventName)) {
+                                    listenEvts.push({ key: eventName, mod: modName, id: id });
+                                }
+                            }
+                            
+                        }
+                       
+                }
+                   
+                   var edges = [];
+                   for(var i = 0; i < listenEvts.length; i++) {
+                        var l = listenEvts[i];
+
+                        for(var j = 0; j < notifyEvts.length; j++) {
+                            var n = notifyEvts[j];
+                            if(l.key === n.key) {
+                                edges.push({from: n.id, to: l.id, arrows:'to', width: 1 });
+                            }
+                        }
+                    }   
+
+                    var container = document.getElementById('mynetwork');
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            var options = {};
+            var network = new vis.Network(container, data, options);
+                });
+
+            
+        </script>
+
+        <script type="text/javascript">
+    function draw() {
+      // create some nodes
+      var nodes = [
+        {id: 1, label: 'Node in\nthe center', shape: 'text', font:{strokeWidth:4}},
+        {id: 2, label: 'Node\nwith\nmultiple\nlines', shape: 'circle'},
+        {id: 3, label: 'This is a lot of text\nbut luckily we can spread\nover multiple lines', shape: 'database'},
+        {id: 4, label: 'This is text\non multiple lines', shape: 'box'},
+        {id: 5, label: 'Little text', shape: 'ellipse'}
+      ];
+
+      // create some edges
+      var edges = [
+        {from: 1, to: 2, color: 'red', width: 3}, // individual length definition is possible
+        {from: 1, to: 3, dashes:true, width: 1},
+        {from: 1, to: 4, width: 1, label:'I\'m an edge!'},
+        {from: 1, to: 5, arrows:'to', width: 1, label:'arrows\nare cool'},
+        {from: 5, to: 1, arrows:'to', width: 1, label:'arrows\nare cool'}
+      ];
+
+      // create a network
+      var container = document.getElementById('mynetwork');
+      var data = {
+        nodes: nodes,
+        edges: edges
+      };
+      var options = {};
+      var network = new vis.Network(container, data, options);
+    }
+
+$(function() {
+    //draw();
+});
+
+  </script>
+    </head>
+    <body>
+<div id="mynetwork"></div>
+    </body>
+</html>
